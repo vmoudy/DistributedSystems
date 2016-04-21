@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify
 app = Flask(__name__)
 
-DATA = {
-	"foo" : "bar"
-}
+DATA = {}
 
 def put_success(value):
 	body = {
