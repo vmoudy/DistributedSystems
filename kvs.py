@@ -2,14 +2,14 @@ from flask import Flask, request, jsonify, redirect
 import re
 import sys
 import os
-import thread
+#import thread
 import time
 import requests
 app = Flask(__name__)
 
 
 DATA = {}
-MEMBERS = [5001, 5002, 5003]
+MEMBERS = [5001, 5002]
 
 
 def put_success(value):
@@ -74,17 +74,21 @@ def primaryHttp(key, method):
         try:
             value = request.form['val']
         except:
-            return request.url
+            return get_error()
 
         if sys.getsizeof(value) <= 1573000:
             if re.match("^[a-zA-Z0-9_]+$", value):
+                for backup_ip in backupIPs:
+                    r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
                 return handle_put(key, value) 
             return handle_char_error()
         return handle_size_error()
-    elif request.method == 'DELETE':
+    #delete message
+    elif method == 'DELETE':
         return handle_delete(key)
+    #get message
     return handle_get(key)
-        
+   
 def backupHttp(key, method):
     if(method == 'PUT'):
         try:
@@ -104,11 +108,35 @@ def backupHttp(key, method):
         r = requests.get(primaryIP + '/kvs/' + key)
         return (r.text, r.status_code, r.headers.items())
     if(method == 'DELETE'):
-        r = requests.delete(primaryIP, data = key)
+        r = requests.delete(primaryIP + '/kvs/' + key)
         return (r.text, r.status_code, r.headers.items())
 
+@app.route("/backup_kvs/<key>", methods=['GET', 'PUT', 'DELETE'])
+def backup_kvs(key):
+    if len(key) > 250:
+        return handle_keysize_error()
 
+    #request value
+    if request.method == 'PUT':
+        try:
+            value = request.args['val']
+        except:
+            pass
+        try:
+            value = request.form['val']
+        except:
+            return get_error()
 
+        if sys.getsizeof(value) <= 1573000:
+            if re.match("^[a-zA-Z0-9_]+$", value):
+                return handle_put(key, value) 
+            return handle_char_error()
+        return handle_size_error()
+    #delete message
+    elif request.method == 'DELETE':
+        return handle_delete(key)
+    #get message
+    return handle_get(key)
 
 @app.route("/kvs/<key>", methods=['GET', 'PUT', 'DELETE'])
 def kvsRoute(key):    
@@ -179,13 +207,19 @@ def sayHello(primary):
 
 primary = False
 primaryIP = None
+backupIPs = []
+
 if __name__ == "__main__":
     MEMBERS = sorted(MEMBERS)
     
-    print MEMBERS
+    #print (MEMBERS)
     if (int(sys.argv[1]) == MEMBERS[0]):
         primary = True
+
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
+    backupIPs.append('http://localhost:' + str(MEMBERS[1]))
+    #backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+
     app.debug = True
-    thread.start_new_thread(sayHello, (primary, ))
+    #thread.start_new_thread(sayHello, (primary, ))
     app.run(port=int(sys.argv[1]), host='localhost')
