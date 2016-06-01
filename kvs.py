@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 
 DATA = {}
-MEMBERS = [5001, 5002]
+MEMBERS = [5001, 5002, 5003]
 
 
 def put_success(value):
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
-    #backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    backupIPs.append('http://localhost:' + str(MEMBERS[2]))
 
     app.debug = True
     #thread.start_new_thread(sayHello, (primary, ))
