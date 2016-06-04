@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 
 DATA = {}
-MEMBERS = [5001, 5002, 5003]
+MEMBERS = [5001, 5002]
 initThread = False
 
 
@@ -201,11 +201,23 @@ def handle_delete(key):
     #delete kvs
     return del_success(key)
 
-def sayHello(primary):
+@app.route("/primary_crash")
+def primary_crash():
+    return "Primary crash", 404
+
+#wakes up every 5 seconds to send a heartbeat, then waits
+#1 second for response, if none begine re-election
+def heartbeat(primary):
+    connect_timeout = 1
     while (True and not primary):
-        print("I am a thread")
+        print ("I am a thread")
         time.sleep(5)
-        r = requests.get(primaryIP + '/hello')
+        #try to heartbeat primary, if not, primary has crashed
+        try:
+            r = requests.get(primaryIP + '/hello', timeout=connect_timeout)
+        except requests.exceptions.ConnectTimeout as e:
+            r = requests.get('http://localhost:5002/primary_crash')
+            
 
 primary = False
 primaryIP = None
@@ -218,8 +230,8 @@ if __name__ == "__main__":
    
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
-    backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    #backupIPs.append('http://localhost:' + str(MEMBERS[2]))
     app.debug = False
-    _thread.start_new_thread(sayHello, (primary, ))
+    _thread.start_new_thread(heartbeat, (primary, ))
 
     app.run(port=int(sys.argv[1]), host='localhost')
