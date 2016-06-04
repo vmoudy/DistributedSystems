@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 
 DATA = {}
-MEMBERS = [5001, 5002]
+MEMBERS = [5001, 5002, 5003]
 initThread = False
 
 
@@ -210,7 +210,6 @@ def primary_crash():
 def heartbeat(primary):
     connect_timeout = 1
     while (True and not primary):
-        print ("I am a thread")
         time.sleep(5)
         #try to heartbeat primary, if not, primary has crashed
         try:
@@ -230,7 +229,7 @@ if __name__ == "__main__":
    
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
-    #backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    backupIPs.append('http://localhost:' + str(MEMBERS[2]))
     app.debug = False
     _thread.start_new_thread(heartbeat, (primary, ))
 
