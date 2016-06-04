@@ -2,14 +2,15 @@ from flask import Flask, request, jsonify, redirect
 import re
 import sys
 import os
-#import thread
 import time
 import requests
+import _thread
 app = Flask(__name__)
 
 
 DATA = {}
-MEMBERS = [5001, 5002]
+MEMBERS = [5001, 5002, 5003]
+initThread = False
 
 
 def put_success(value):
@@ -85,6 +86,8 @@ def primaryHttp(key, method):
         return handle_size_error()
     #delete message
     elif method == 'DELETE':
+        for backup_ip in backupIPs:
+            r = requests.delete(backup_ip + '/backup_kvs/' + key)
         return handle_delete(key)
     #get message
     return handle_get(key)
@@ -201,7 +204,6 @@ def handle_delete(key):
 def sayHello(primary):
     while (True and not primary):
         print("I am a thread")
-        x = 2345600*100
         time.sleep(5)
         r = requests.get(primaryIP + '/hello')
 
@@ -211,15 +213,13 @@ backupIPs = []
 
 if __name__ == "__main__":
     MEMBERS = sorted(MEMBERS)
-    
-    #print (MEMBERS)
     if (int(sys.argv[1]) == MEMBERS[0]):
         primary = True
-
+   
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
-    #backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    app.debug = False
+    _thread.start_new_thread(sayHello, (primary, ))
 
-    app.debug = True
-    #thread.start_new_thread(sayHello, (primary, ))
     app.run(port=int(sys.argv[1]), host='localhost')
