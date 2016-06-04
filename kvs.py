@@ -4,7 +4,7 @@ import sys
 import os
 import time
 import requests
-import thread
+import _thread
 app = Flask(__name__)
 
 
@@ -86,6 +86,8 @@ def primaryHttp(key, method):
         return handle_size_error()
     #delete message
     elif method == 'DELETE':
+        for backup_ip in backupIPs:
+            r = requests.delete(backup_ip + '/backup_kvs/' + key)
         return handle_delete(key)
     #get message
     return handle_get(key)
@@ -218,6 +220,6 @@ if __name__ == "__main__":
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
     backupIPs.append('http://localhost:' + str(MEMBERS[2]))
     app.debug = False
-    thread.start_new_thread(sayHello, (primary, ))
+    _thread.start_new_thread(sayHello, (primary, ))
 
     app.run(port=int(sys.argv[1]), host='localhost')
