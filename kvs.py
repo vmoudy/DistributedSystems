@@ -217,8 +217,8 @@ def heartbeat(primary):
         time.sleep(5)
         #try to heartbeat primary, if not, primary has crashed
         try:
-            r = requests.get(primaryIP + '/hello', timeout=connect_timeout)
-        except requests.exceptions.ConnectTimeout as e:
+            r = requests.get(primaryIP + '/heartbeat', timeout=connect_timeout)
+        except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError) as e:
             r = requests.get('http://localhost:5002/primary_crash')
             
 
@@ -234,8 +234,11 @@ if __name__ == "__main__":
         primary = True
    
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
-    backupIPs.append('http://localhost:' + str(MEMBERS[1]))
-    backupIPs.append('http://localhost:' + str(MEMBERS[2]))
+    for member in MEMBERS:
+        backupIPs.append('http://localhost:' + str(member))
+    primaryIP = backupIPs.pop(0)                     
+    print backupIPs
+    print primaryIP
     app.debug = False
     thread.start_new_thread(heartbeat, (primary, ))
     myPort = sys.argv[1]
