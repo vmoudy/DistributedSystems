@@ -7,7 +7,8 @@ import requests
 import thread
 app = Flask(__name__)
 
-newData = [];
+addNewData = []
+removeData = []
 DATA = {}
 MEMBERS = [5001, 5002, 5003]
 aliveMembers = []
@@ -89,18 +90,12 @@ def primaryHttp(key, method):
         if not re.match("^[a-zA-Z0-9_]+$", value):
             return handle_char_error()
 
-        #print "Backups: ", backupIPs
-            #for backup_ip in backupIPs:
-            #    r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
-            #    print "text: ", r.text
-        newData.append((key, value))
         return handle_put(key, value) 
             
        
     #delete message
     elif method == 'DELETE':
-        for backup_ip in backupIPs:
-            r = requests.delete(backup_ip + '/backup_kvs/' + key)
+        
         return handle_delete(key)
     #get message
     return handle_get(key)
@@ -189,6 +184,8 @@ def handle_char_error():
     return jsonify(body), 413
 
 def handle_put(key, value):
+    if primary:
+        addNewData.append((key, value))
     #key not in dict, create one
     if key not in DATA:
         DATA[key] = value
@@ -209,6 +206,8 @@ def handle_delete(key):
     if key not in DATA:
         return del_error(key), 404
     #delete kvs
+    if primary:
+        removeData.append(key)
     return del_success(key)
 
 @app.route("/primary_crash")
@@ -275,10 +274,14 @@ def heartbeat():
             #try to heartbeat everyone, if not, node has crashed
             try:
                 r = requests.get(node + '/heartbeat', timeout=connect_timeout)
-                for new_d in newData:
+                for new_d in addNewData:
                     for backup_ip in backupIPs:
                         r = requests.put(backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
-                    newData.remove(new_d)
+                    addNewData.remove(new_d)
+                for rm_data in removeData:
+                    for backup_ip in backupIPs:
+                        r = requests.delete(backup_ip + '/backup_kvs/' + rm_data)
+                    removeData.remove(rm_data)
                     #print "text: ", r.text
             except (requests.exceptions.ConnectTimeout) as e:
                 pass
