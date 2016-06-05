@@ -10,6 +10,9 @@ app = Flask(__name__)
 
 DATA = {}
 MEMBERS = [5001, 5002, 5003]
+aliveMembers = []
+afkMembers = []
+deadMembers = []
 initThread = False
 
 
@@ -84,7 +87,7 @@ def primaryHttp(key, method):
         if sys.getsizeof(value) <= 1573000:
             if re.match("^[a-zA-Z0-9_]+$", value):
                 for backup_ip in backupIPs:
-                    r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
+                        r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
                 return handle_put(key, value) 
             return handle_char_error()
         return handle_size_error()
@@ -97,6 +100,7 @@ def primaryHttp(key, method):
     return handle_get(key)
    
 def backupHttp(key, method):
+    global primaryIP
     if(method == 'PUT'):
         try:
             value = request.args['val']
@@ -106,8 +110,10 @@ def backupHttp(key, method):
             value = request.form['val']
         except:
             return request.url
-        
-        r = requests.put(primaryIP + '/kvs/' + key, data = {'val' : value})
+        print "trying"
+        print primaryIP
+        r = requests.put(primaryIP +  '/kvs/' + key, data = {'val' : value})
+        #r = requests.get(primaryIP + '/hello')
         
         return (r.text, r.status_code, r.headers.items())
 
@@ -209,18 +215,68 @@ def handle_delete(key):
 def primary_crash():
     return "Primary crash", 404
 
-#wakes up every 5 seconds to send a heartbeat, then waits
-#1 second for response, if none begine re-election
-def heartbeat(primary):
-    connect_timeout = 1
-    while (True and not primary):
-        time.sleep(5)
-        #try to heartbeat primary, if not, primary has crashed
+@app.route("/alive")
+def alive():
+    return "1", 200
+
+@app.route("/alivecheck/<node>", methods=['GET'])
+def checkNode(node):
+    try:
+        r = requests.get(node + 'alive')
+        return "alive"
+    except (requests.exceptions.ConectionError) as e:
+        return "dead"
+       
+       
+def nodeCrash(node):
+    global aliveMembers
+    global afkMembers
+    global deadMembers
+    global primaryIP
+    global primary
+    global backupIPs
+    aliveMembers.remove(node)
+    print aliveMembers
+    afkMembers.append(node)
+    global myIP
+    agreeBool = True
+    for member in aliveMembers:
         try:
-            r = requests.get(primaryIP + '/heartbeat', timeout=connect_timeout)
-        except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError) as e:
-            r = requests.get('http://localhost:5002/primary_crash')
-            
+            r = requests.get(member + '/alivecheck/' + node)
+            if r == "alive":
+                agreeBool = False
+        except (requests.exceptions.ConnectionError) as e:
+            pass
+    if agreeBool == True:
+        afkMembers.remove(node)
+        try:
+            backupIPs.remove(node)
+        except ValueError:
+            pass
+        deadMembers.append(node)
+        primaryIP = aliveMembers[0]
+        if myIP == primaryIP:
+            primary = True
+            backupIPs.remove(myIP)
+          
+
+#wakes up every 5 seconds to send a heartbeat, then waits
+#1 second for response, if none begin re-election
+def heartbeat():
+    connect_timeout = 1
+    global primary
+    while (True and not primary):
+        time.sleep(2)
+        for node in aliveMembers:
+            #try to heartbeat primary, if not, primary has crashed
+            try:
+                r = requests.get(node + '/heartbeat', timeout=connect_timeout)
+            except (requests.exceptions.ConnectTimeout) as e:
+                pass
+            except (requests.exceptions.ConnectionError) as e:
+                #r = requests.get('http://localhost:5002/primary_crash')
+                nodeCrash(node)
+
 
 primary = False
 primaryIP = None
@@ -236,12 +292,11 @@ if __name__ == "__main__":
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     for member in MEMBERS:
         backupIPs.append('http://localhost:' + str(member))
-    primaryIP = backupIPs.pop(0)                     
-    print backupIPs
-    print primaryIP
+        aliveMembers.append('http://localhost:' + str(member))
+    primaryIP = backupIPs.pop(0)      
     app.debug = False
-    thread.start_new_thread(heartbeat, (primary, ))
+    thread.start_new_thread(heartbeat, ())
     myPort = sys.argv[1]
-    myIP = 'localhost'
+    myIP = 'http://localhost:' + myPort
 
     app.run(port=int(sys.argv[1]), host='localhost')
