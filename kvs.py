@@ -64,7 +64,6 @@ def echo():
 def hbreturn():
     return myIP + ":" + myPort
 
-
 @app.route("/kvs/")
 def empty():
     return handle_noinput_error()
@@ -86,6 +85,7 @@ def primaryHttp(key, method):
 
         if sys.getsizeof(value) <= 1573000:
             if re.match("^[a-zA-Z0-9_]+$", value):
+                print backupIPs
                 for backup_ip in backupIPs:
                         r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
                 return handle_put(key, value) 
@@ -254,21 +254,25 @@ def nodeCrash(node):
         except ValueError:
             pass
         deadMembers.append(node)
+        print deadMembers
+        print backupIPs
         primaryIP = aliveMembers[0]
         if myIP == primaryIP:
             primary = True
-            backupIPs.remove(myIP)
+            try:
+                backupIPs.remove(myIP)
+            except ValueError:
+                pass
           
 
 #wakes up every 5 seconds to send a heartbeat, then waits
 #1 second for response, if none begin re-election
 def heartbeat():
     connect_timeout = 1
-    global primary
-    while (True and not primary):
+    while (True):
         time.sleep(2)
         for node in aliveMembers:
-            #try to heartbeat primary, if not, primary has crashed
+            #try to heartbeat everyone, if not, node has crashed
             try:
                 r = requests.get(node + '/heartbeat', timeout=connect_timeout)
             except (requests.exceptions.ConnectTimeout) as e:
