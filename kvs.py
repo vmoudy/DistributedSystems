@@ -4,7 +4,7 @@ import sys
 import os
 import time
 import requests
-import _thread
+import thread
 app = Flask(__name__)
 
 
@@ -56,6 +56,10 @@ def hello():
 @app.route("/echo")
 def echo():
     return request.args['msg']
+
+@app.route("/heartbeat")
+def hbreturn():
+    return myIP + ":" + myPort
 
 
 @app.route("/kvs/")
@@ -221,6 +225,8 @@ def heartbeat(primary):
 primary = False
 primaryIP = None
 backupIPs = []
+myIP = None
+myPort = None
 
 if __name__ == "__main__":
     MEMBERS = sorted(MEMBERS)
@@ -231,6 +237,8 @@ if __name__ == "__main__":
     backupIPs.append('http://localhost:' + str(MEMBERS[1]))
     backupIPs.append('http://localhost:' + str(MEMBERS[2]))
     app.debug = False
-    _thread.start_new_thread(heartbeat, (primary, ))
+    thread.start_new_thread(heartbeat, (primary, ))
+    myPort = sys.argv[1]
+    myIP = 'localhost'
 
     app.run(port=int(sys.argv[1]), host='localhost')
