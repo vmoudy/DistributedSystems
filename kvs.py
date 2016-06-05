@@ -7,7 +7,7 @@ import requests
 import thread
 app = Flask(__name__)
 
-
+newData = [];
 DATA = {}
 MEMBERS = [5001, 5002, 5003]
 aliveMembers = []
@@ -83,14 +83,20 @@ def primaryHttp(key, method):
         except:
             return get_error()
 
-        if sys.getsizeof(value) <= 1573000:
-            if re.match("^[a-zA-Z0-9_]+$", value):
-                print backupIPs
-                for backup_ip in backupIPs:
-                        r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
-                return handle_put(key, value) 
+        if sys.getsizeof(value) > 1573000:
+            return handle_size_error()
+
+        if not re.match("^[a-zA-Z0-9_]+$", value):
             return handle_char_error()
-        return handle_size_error()
+
+        #print "Backups: ", backupIPs
+            #for backup_ip in backupIPs:
+            #    r = requests.put(backup_ip + '/backup_kvs/' + key, data = {'val' : value})
+            #    print "text: ", r.text
+        newData.append((key, value))
+        return handle_put(key, value) 
+            
+       
     #delete message
     elif method == 'DELETE':
         for backup_ip in backupIPs:
@@ -110,8 +116,7 @@ def backupHttp(key, method):
             value = request.form['val']
         except:
             return request.url
-        print "trying"
-        print primaryIP
+        print "Trying to write to: ", primaryIP
         r = requests.put(primaryIP +  '/kvs/' + key, data = {'val' : value})
         #r = requests.get(primaryIP + '/hello')
         
@@ -139,12 +144,7 @@ def backup_kvs(key):
             value = request.form['val']
         except:
             return get_error()
-
-        if sys.getsizeof(value) <= 1573000:
-            if re.match("^[a-zA-Z0-9_]+$", value):
-                return handle_put(key, value) 
-            return handle_char_error()
-        return handle_size_error()
+        return handle_put(key, value) 
     #delete message
     elif request.method == 'DELETE':
         return handle_delete(key)
@@ -236,7 +236,7 @@ def nodeCrash(node):
     global primary
     global backupIPs
     aliveMembers.remove(node)
-    print aliveMembers
+    print "Alive Nodes: ", aliveMembers
     afkMembers.append(node)
     global myIP
     agreeBool = True
@@ -254,8 +254,8 @@ def nodeCrash(node):
         except ValueError:
             pass
         deadMembers.append(node)
-        print deadMembers
-        print backupIPs
+        print "Dead Nodes: ", deadMembers
+        print "Backups: ", backupIPs
         primaryIP = aliveMembers[0]
         if myIP == primaryIP:
             primary = True
@@ -275,6 +275,11 @@ def heartbeat():
             #try to heartbeat everyone, if not, node has crashed
             try:
                 r = requests.get(node + '/heartbeat', timeout=connect_timeout)
+                for new_d in newData:
+                    for backup_ip in backupIPs:
+                        r = requests.put(backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
+                    newData.remove(new_d)
+                    #print "text: ", r.text
             except (requests.exceptions.ConnectTimeout) as e:
                 pass
             except (requests.exceptions.ConnectionError) as e:
