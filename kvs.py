@@ -271,15 +271,19 @@ def heartbeat():
     while (True):
         time.sleep(2)
         for node in aliveMembers:
+            if (node == myIP):
+                continue
             #try to heartbeat everyone, if not, node has crashed
             try:
                 r = requests.get(node + '/heartbeat', timeout=connect_timeout)
+                # sending put request to backups
                 for new_d in addNewData:
                     for backup_ip in backupIPs:
                         r = requests.put(backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
                     addNewData.remove(new_d)
+                # sending delete request to backups
                 for rm_data in removeData:
-                    for backup_ip in backupIPs:
+                    for backup_ip in backupIPs: 
                         r = requests.delete(backup_ip + '/backup_kvs/' + rm_data)
                     removeData.remove(rm_data)
                     #print "text: ", r.text
