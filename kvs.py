@@ -10,7 +10,7 @@ app = Flask(__name__)
 addNewData = []
 removeData = []
 DATA = {}
-MEMBERS = [5001, 5002, 5003]
+MEMBERS = os.environ.get('MEMBERS').split(',')
 aliveMembers = []
 afkMembers = []
 deadMembers = []
@@ -298,17 +298,17 @@ myPort = None
 
 if __name__ == "__main__":
     MEMBERS = sorted(MEMBERS)
-    if (int(sys.argv[1]) == MEMBERS[0]):
+    if ((os.environ.get('IP') + ':' + (os.environ.get('PORT')) == MEMBERS[0]):
         primary = True
    
     primaryIP = 'http://localhost:' + str(MEMBERS[0])
     for member in MEMBERS:
-        backupIPs.append('http://localhost:' + str(member))
-        aliveMembers.append('http://localhost:' + str(member))
+        backupIPs.append('http://' + str(member))
+        aliveMembers.append('http://' + str(member))
     primaryIP = backupIPs.pop(0)      
     app.debug = False
     thread.start_new_thread(heartbeat, ())
-    myPort = sys.argv[1]
+    myPort = os.environ.get('PORT')
     myIP = 'http://localhost:' + myPort
 
-    app.run(port=int(sys.argv[1]), host='localhost')
+    app.run(port=myPort, host=os.environ.get('I P'))

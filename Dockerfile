@@ -6,4 +6,4 @@ COPY . /kvs
 WORKDIR /kvs
 RUN pip install -r requirements.txt
 ENTRYPOINT ["python"]
-CMD ["keyvaluestore.py"]
+CMD ["kvs.py"]
