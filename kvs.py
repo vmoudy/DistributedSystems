@@ -268,6 +268,7 @@ def nodeCrash(node):
 #1 second for response, if none begin re-election
 def heartbeat():
     connect_timeout = 1
+    removeFlag = True
     while (True):
         time.sleep(2)
         print aliveMembers
@@ -279,13 +280,20 @@ def heartbeat():
                 # sending put request to backups
                 for new_d in addNewData:
                     for backup_ip in backupIPs:
-                        r = requests.put(backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
-                    addNewData.remove(new_d)
+                        r = (backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
+                        if r.status_code != 200 and r.status_code != 201:
+                        	removeFlag = False
+                    if removeFlag:
+                    	addNewData.remove(new_d)
                 # sending delete request to backups
+                removeFlag = True
                 for rm_data in removeData:
                     for backup_ip in backupIPs: 
                         r = requests.delete(backup_ip + '/backup_kvs/' + rm_data)
-                    removeData.remove(rm_data)
+                        if r.status_code != 200:
+                        	removeFlag = False
+                    if removeFlag:
+                    	removeData.remove(rm_data)
                     #print "text: ", r.text
             except (requests.exceptions.ConnectionError) as e:
                 #r = requests.get('http://localhost:5002/primary_crash')
