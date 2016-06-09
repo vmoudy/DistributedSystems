@@ -63,7 +63,7 @@ def echo():
 
 @app.route("/heartbeat")
 def hbreturn():
-    return myIP + ":" + myPort
+    return myIP
 
 @app.route("/kvs/")
 def empty():
@@ -264,18 +264,18 @@ def nodeCrash(node):
                 pass
           
 
-#wakes up every 5 seconds to send a heartbeat, then waits
+#wakes up every 5 secondss to send a heartbeat, then waits
 #1 second for response, if none begin re-election
 def heartbeat():
     connect_timeout = 1
     while (True):
         time.sleep(2)
+        print aliveMembers
         for node in aliveMembers:
-            if (node == myIP):
+            if(node == myIP):
                 continue
-            #try to heartbeat everyone, if not, node has crashed
             try:
-                r = requests.get(node + '/heartbeat', timeout=connect_timeout)
+                r = requests.get(node + '/heartbeat')
                 # sending put request to backups
                 for new_d in addNewData:
                     for backup_ip in backupIPs:
@@ -287,8 +287,6 @@ def heartbeat():
                         r = requests.delete(backup_ip + '/backup_kvs/' + rm_data)
                     removeData.remove(rm_data)
                     #print "text: ", r.text
-            except (requests.exceptions.ConnectTimeout) as e:
-                pass
             except (requests.exceptions.ConnectionError) as e:
                 #r = requests.get('http://localhost:5002/primary_crash')
                 nodeCrash(node)
@@ -302,17 +300,19 @@ myPort = None
 
 if __name__ == "__main__":
     MEMBERS = sorted(MEMBERS)
-    if ((os.environ.get('IP') + ':' + (os.environ.get('PORT')) == MEMBERS[0]):
+    print MEMBERS
+    if ((os.environ.get('IP') + ':' + (os.environ.get('PORT')) == MEMBERS[0])):
         primary = True
    
-    primaryIP = 'http://localhost:' + str(MEMBERS[0])
+    primaryIP = 'http://' + str(MEMBERS[0])
     for member in MEMBERS:
-        backupIPs.append('http://' + str(member))
-        aliveMembers.append('http://' + str(member))
-    primaryIP = backupIPs.pop(0)      
+        backupIPs.append('http://' + member)
+        aliveMembers.append('http://' + member)
+    primaryIP = backupIPs.pop(0)
+    print primaryIP      
     app.debug = False
     thread.start_new_thread(heartbeat, ())
     myPort = os.environ.get('PORT')
-    myIP = 'http://localhost:' + myPort
+    myIP = 'http://' + os.environ.get('IP') +':' + myPort
 
-    app.run(port=myPort, host=os.environ.get('I P'))
+    app.run(port=myPort, host=os.environ.get('IP'))
