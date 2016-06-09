@@ -267,7 +267,10 @@ def nodeCrash(node):
 #1 second for response, if none begin re-election
 def heartbeat():
     connect_timeout = 1
+<<<<<<< HEAD
     removeFlag = True
+=======
+>>>>>>> bf3a6f318465e3c68c6c68b40811678839e2528d
     while (True):
         time.sleep(2)
         print aliveMembers
@@ -279,6 +282,7 @@ def heartbeat():
                 # sending put request to backups
                 for new_d in addNewData:
                     for backup_ip in backupIPs:
+<<<<<<< HEAD
                         r = (backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
                         if r.status_code != 200 and r.status_code != 201:
                         	removeFlag = False
@@ -293,6 +297,15 @@ def heartbeat():
                         	removeFlag = False
                     if removeFlag:
                     	removeData.remove(rm_data)
+=======
+                        r = requests.put(backup_ip + '/backup_kvs/' + new_d[0], data = {'val' : new_d[1]})
+                    addNewData.remove(new_d)
+                # sending delete request to backups
+                for rm_data in removeData:
+                    for backup_ip in backupIPs: 
+                        r = requests.delete(backup_ip + '/backup_kvs/' + rm_data)
+                    removeData.remove(rm_data)
+>>>>>>> bf3a6f318465e3c68c6c68b40811678839e2528d
                     #print "text: ", r.text
             except (requests.exceptions.ConnectionError) as e:
                 #r = requests.get('http://localhost:5002/primary_crash')
@@ -322,4 +335,8 @@ if __name__ == "__main__":
     myPort = os.environ.get('PORT')
     myIP = 'http://' + os.environ.get('IP') +':' + myPort
 
+<<<<<<< HEAD
     app.run(port=myPort, host=os.environ.get('IP'))
+=======
+    app.run(port=myPort, host=os.environ.get('IP'))
+>>>>>>> bf3a6f318465e3c68c6c68b40811678839e2528d
