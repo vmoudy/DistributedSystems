@@ -16,7 +16,6 @@ afkMembers = []
 deadMembers = []
 initThread = False
 
-
 def put_success(value):
     body = {
         'replaced' : value,
